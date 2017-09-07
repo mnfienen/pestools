@@ -140,13 +140,13 @@ class Res(object):
         data = data[~np.isnan(data)] # drop nans
 
         stats = {}
-        stats['n'] = len(data)
+        stats['n'] = int(len(data))
         stats['Range'] = np.max(data) - np.min(data)
         stats['Max'] = np.max(data)
         stats['Min'] = np.min(data)
         stats['Mean'] = np.mean(data)
         stats['Standard deviation'] = np.std(data, ddof=ddof)
-        stats['Varience'] = np.var(data, ddof=ddof)
+        stats['Variance'] = np.var(data, ddof=ddof)
         stats['25%'] = np.percentile(data, 25)
         stats['50%'] = np.percentile(data, 50)
         stats['75%'] = np.percentile(data, 75)
@@ -216,7 +216,7 @@ class Res(object):
         # range, variance, and std
         stats['Range'] = stats['Max'] - stats['Min']
         stats['Standard deviation'] = df.Residual.std(ddof=ddof)
-        stats['Varience'] = df.Residual.var(ddof=ddof)
+        stats['Variance'] = df.Residual.var(ddof=ddof)
 
         # absolute max, min amd mean
         stats['Max (absolute)'] = df.Absolute_Residual.max()
@@ -243,7 +243,7 @@ class Res(object):
         stats['p-value'] = p
 
         # clean-up the ordering
-        stats = stats.T.ix[['n', 'Range', 'Max', 'Min', 'Mean', 'Standard deviation', 'Varience', '25%', '50%', '75%',
+        stats = stats.T.ix[['n', 'Range', 'Max', 'Min', 'Mean', 'Standard deviation', 'Variance', '25%', '50%', '75%',
                           'Max (absolute)', 'Min (absolute)', 'MAE', 'RMSE', 'RMSE/range', 'Normally Distributed', 'p-value']]
         return stats
 
@@ -292,17 +292,17 @@ class Res(object):
         range_res = max_res - min_res
             
         # Weighted Residual Stats
-        mean_w_res = group_df['Weighted Residual'].values.mean()
-        min_w_res = group_df['Weighted Residual'].values.min()
-        max_w_res = group_df['Weighted Residual'].values.max()
-        std_w_res = group_df['Weighted Residual'].values.std()
+        mean_w_res = group_df['Weighted_Residual'].values.mean()
+        min_w_res = group_df['Weighted_Residual'].values.min()
+        max_w_res = group_df['Weighted_Residual'].values.max()
+        std_w_res = group_df['Weighted_Residual'].values.std()
         range_w_res = max_w_res - min_w_res
         
         # Absolute Residual Stats
-        mean_abs_res = group_df['Absolute Residual'].values.mean()
-        min_abs_res = group_df['Absolute Residual'].values.min()
-        max_abs_res = group_df['Absolute Residual'].values.max()
-        std_abs_res = group_df['Absolute Residual'].values.std()
+        mean_abs_res = group_df['Absolute_Residual'].values.mean()
+        min_abs_res = group_df['Absolute_Residual'].values.min()
+        max_abs_res = group_df['Absolute_Residual'].values.max()
+        std_abs_res = group_df['Absolute_Residual'].values.std()
         range_abs_res = max_abs_res - min_abs_res
         
         # Root Mean Square Error
@@ -381,17 +381,17 @@ class Res(object):
             range_res = max_res - min_res
                 
             # Weighted Residual Stats
-            mean_w_res = group_df['Weighted Residual'].values.mean()
-            min_w_res = group_df['Weighted Residual'].values.min()
-            max_w_res = group_df['Weighted Residual'].values.max()
-            std_w_res = group_df['Weighted Residual'].values.std()
+            mean_w_res = group_df['Weighted_Residual'].values.mean()
+            min_w_res = group_df['Weighted_Residual'].values.min()
+            max_w_res = group_df['Weighted_Residual'].values.max()
+            std_w_res = group_df['Weighted_Residual'].values.std()
             range_w_res = max_w_res - min_w_res
             
             # Absolute Residual Stats
-            mean_abs_res = group_df['Absolute Residual'].values.mean()
-            min_abs_res = group_df['Absolute Residual'].values.min()
-            max_abs_res = group_df['Absolute Residual'].values.max()
-            std_abs_res = group_df['Absolute Residual'].values.std()
+            mean_abs_res = group_df['Absolute_Residual'].values.mean()
+            min_abs_res = group_df['Absolute_Residual'].values.min()
+            max_abs_res = group_df['Absolute_Residual'].values.max()
+            std_abs_res = group_df['Absolute_Residual'].values.std()
             range_abs_res = max_abs_res - min_abs_res
             
             # Root Mean Square Error
@@ -426,7 +426,7 @@ class Res(object):
             print(' ')
 
 
-    def plot_objective_contrib (self, df=None, drop_regul=False):
+    def plot_objective_contrib (self, df=None, drop_regul=False, colors=None):
         ''' Plot the contribution of each group to the objective function 
         as a pie chart.
         drop_regul: If True, ignores regularization groups
@@ -461,7 +461,7 @@ class Res(object):
             else:
                 contributions.append((grouped.get_group(key)['Weighted_Residual']**2).sum())
                 groups.append(key)
-        percents = (contributions / sum(contributions))*100
+        percents = [(i / sum(contributions))*100 for i in contributions]
         groups = np.array(groups)
         data = np.rec.fromarrays([percents, groups])
         data.sort()
@@ -473,16 +473,25 @@ class Res(object):
         for i in data:
             if i[0] > 1.0:
                 greater_1_values.append(i[0])
-                greater_1_groups.append(i[1]) 
-        # Assign colors for each group
-        color_map = plt.get_cmap('Set3')
-        color_dict = dict()
-        for i in range(len(greater_1_groups)):
-            color = color_map(1.*i/len(greater_1_groups))
-            color_dict[greater_1_groups[i]] = color
-        colors = []
-        for group in greater_1_groups:            
-            colors.append(color_dict[group])
+                greater_1_groups.append(i[1])
+        if colors:
+            # use the colors supplied, but repeat the sequence if it's too short
+            if len(colors) < len(greater_1_groups):
+                multout = int(np.ceil(len(greater_1_groups)/len(colors)))
+                colors *= multout
+                colors = colors[:len(greater_1_groups)]
+
+        else:
+            # Assign colors for each group
+            color_map = plt.get_cmap('Set3')
+            color_dict = dict()
+            for i in range(len(greater_1_groups)):
+                color = color_map(1.*i/len(greater_1_groups))
+                color_dict[greater_1_groups[i]] = color
+            colors = []
+            for group in greater_1_groups:
+                colors.append(color_dict[group])
+
         retfig = plt.figure()
         cax = retfig.add_subplot(111, aspect='equal')
         plt.pie(greater_1_values, labels=greater_1_groups, autopct='%1.1f%%', colors = colors, startangle=90)
@@ -512,7 +521,7 @@ class Res(object):
         for key in group_keys:
             contributions.append((grouped.get_group(key)['Weighted_Residual']**2).sum())
             groups.append(key)
-        percents = (contributions / sum(contributions))*100
+        percents = [(i / sum(contributions))*100 for i in contributions]
         groups = np.array(groups)
         #it = np.nditer(percents, flags = ['multi_index'])
         #while not it.finished:
@@ -667,6 +676,7 @@ class Res(object):
     def plot_one2one(self, groupinfo, title=None, print_stats=[], print_format='.2f',
                      exclude_zero_stats=True, abbreviations=False,
                      error_bars_obs=False,
+                     colors=None,
                      line_kwds={}, **kwds):
         """
         Makes one-to-one plot of two dataframe columns, using pyplot.scatter
@@ -688,7 +698,7 @@ class Res(object):
                 - 'Min'
                 - 'Mean'
                 - 'Standard deviation'
-                - 'Varience'
+                - 'Variance'
                 - '25%'
                 - '50%'
                 - '75%'
@@ -727,7 +737,7 @@ class Res(object):
             df = self.df
 
         plot_obj = plots.One2onePlot(df, 'Measured', 'Modelled', groupinfo, title=title,
-                                     error_bars_obs=error_bars_obs, line_kwds=line_kwds, **kwds)
+                                     error_bars_obs=error_bars_obs, colors=colors, line_kwds=line_kwds, **kwds)
 
         plot_obj.generate()
 
@@ -739,7 +749,8 @@ class Res(object):
                                     'MAE': 'Mean absolute error',
                                     'RMSE': 'Root mean squared error'}, inplace=True)
             text = ''.join(['{}: {:{fmt}}\n'.format(i, r['Group summary'], fmt=print_format) for i, r in stats.iterrows()])
-            plot_obj.ax.text(0.05, 0.95, text, transform=plot_obj.ax.transAxes, va='top', ha='left')
+            plot_obj.ax.text(0.05, 0.95, text, transform=plot_obj.ax.transAxes, va='top', ha='left',
+                             size=plt.rcParams['axes.labelsize']-1)
 
         plot_obj.draw()
 
@@ -768,7 +779,7 @@ class Res(object):
                 - 'Min'
                 - 'Mean'
                 - 'Standard deviation'
-                - 'Varience'
+                - 'Variance'
                 - '25%'
                 - '50%'
                 - '75%'
@@ -804,7 +815,8 @@ class Res(object):
         if len(print_stats) > 0:
             stats = self.describe_groups(plot_obj.groups, exclude_zero=exclude_zero_stats).ix[print_stats]
             text = ''.join(['{}: {:{fmt}}\n'.format(i, r['Group summary'], fmt=print_format) for i, r in stats.iterrows()])
-            plot_obj.ax.text(0.05, 0.95, text, transform=plot_obj.ax.transAxes, va='top', ha='left')
+            plot_obj.ax.text(0.05, 0.95, text, transform=plot_obj.ax.transAxes, va='top', ha='left',
+                             size=plt.rcParams['axes.labelsize']-1)
 
         plot_obj.draw()
 

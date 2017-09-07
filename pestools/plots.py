@@ -230,7 +230,7 @@ class Hist(Plot):
 class ScatterPlot(Plot):
     """Makes one-to-one plot of two dataframe columns, using pyplot.scatter"""
 
-    def __init__(self, df, x, y, groupinfo, group_col='Group', line_kwds={}, legend_kwds={}, **kwds):
+    def __init__(self, df, x, y, groupinfo, group_col='Group',  colors=None, line_kwds={}, legend_kwds={}, **kwds):
 
         Plot.__init__(self, df, **kwds)
         """
@@ -277,7 +277,7 @@ class ScatterPlot(Plot):
             x = self.df.columns[x]
         if pd.lib.is_integer(y) and not self.df.columns.holds_integer():
             y = self.df.columns[y]
-
+        self.colors=colors
         self.x = x
         self.y = y
         self.group_col = group_col
@@ -544,15 +544,21 @@ class SpatialPlot(ScatterPlot):
 class One2onePlot(ScatterPlot):
     """Makes one-to-one plot of two dataframe columns, using pyplot.scatter"""
 
-    def __init__(self, df, x, y, groupinfo, error_bars_obs=False, line_kwds={}, **kwds):
+    def __init__(self, df, x, y, groupinfo, error_bars_obs=False, colors=None, line_kwds={}, **kwds):
 
-        ScatterPlot.__init__(self, df, x, y, groupinfo, line_kwds=line_kwds, **kwds)
+        ScatterPlot.__init__(self, df, x, y, groupinfo, colors=colors, line_kwds=line_kwds, **kwds)
         self.error_bars_obs = error_bars_obs
-
+        if colors:
+            self.cmap = colors
+        else:
+            self.cmap = plt.cm.cool
     def _make_plot(self):
 
         # use matplotlib's color cycle to plot each group as a different color by default
-        colors = [plt.cm.cool(i) for i in np.linspace(0, 1, len(self.groups))]
+        if type(self.cmap) == mpl.colors.LinearSegmentedColormap:
+            colors = [self.cmap(i) for i in np.linspace(0, 1, len(self.groups))]
+        else:
+            colors = [self.cmap[int(i)] for i in np.linspace(0, 1, len(self.groups))]
 
         for i, grp in enumerate(self.groups):
 
@@ -870,7 +876,7 @@ class IdentBar(Plot):
         ax1 = plt.subplot2grid((1, 15), (0, 13))
         norm = mpl.colors.Normalize(vmin=1, vmax=self.N)
         cb_bounds = np.linspace(0, self.N, self.N+1).astype(int)[1:]
-        cb_axis = np.arange(0, self.N+1, int(self.N/10.0))
+        cb_axis = np.arange(0, self.N+1, int(np.max([1,self.N/10.0])))
         cb_axis[0] = 1
         cb = mpl.colorbar.ColorbarBase(ax1, cmap=cm.jet_r, norm=norm, boundaries=cb_bounds, orientation='vertical')
         cb.set_ticks(cb_axis)
